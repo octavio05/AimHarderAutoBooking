@@ -3,7 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "start:local": "npx cross-env NODE_ENV=development ts-node src/index.ts",
+    "build:docker:development": "docker compose --env-file .env.development build",
+    "start:development": "docker compose --env-file .env.development up -d -V",
+    "start:docker:development": "xvfb-run -a npx ts-node src/index.ts",
+    "start:docker:production": "tsc && xvfb-run -a node dist/index.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -11,9 +17,15 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/node": "^25.2.3",
+    "@types/node-telegram-bot-api": "^0.64.13",
+    "cross-env": "^10.1.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "dotenv": "^17.3.1",
+    "node-cron": "^4.2.1",
+    "node-telegram-bot-api": "^0.67.0",
     "playwright-extra": "^4.3.6"
   }
 }

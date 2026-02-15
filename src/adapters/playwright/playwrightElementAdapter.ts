@@ -59,6 +59,13 @@ export class PlaywrightElementAdapter implements BrowserElement {
 
     }
 
+    public async getElements(selector: string): Promise<BrowserElement[]> {
+
+        const elements = await this._element.locator(selector).all();
+        return elements.map((element) => new PlaywrightElementAdapter(element));
+
+    }
+
     /**
      * Scrolls the element into view if needed.
      * @returns A promise that resolves when the element is scrolled into view.
@@ -83,6 +90,15 @@ export class PlaywrightElementAdapter implements BrowserElement {
             return;
 
         await this._element.click(options);
+
+    }
+
+    public async type(text: string): Promise<void> {
+
+        if (await this._element.count() === 0)
+            return;
+
+        await this._element.type(text);
 
     }
 
