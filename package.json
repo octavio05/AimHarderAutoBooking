@@ -6,7 +6,9 @@
   "scripts": {
     "start:local": "npx cross-env NODE_ENV=development ts-node src/index.ts",
     "build:docker:development": "docker compose --env-file .env.development build",
+    "build:docker:production": "docker compose --env-file .env.production build",
     "start:development": "docker compose --env-file .env.development up -d -V",
+    "start:production": "docker compose --env-file .env.production up -d",
     "start:docker:development": "xvfb-run -a npx ts-node src/index.ts",
     "start:docker:production": "tsc && xvfb-run -a node dist/index.js"
   },
