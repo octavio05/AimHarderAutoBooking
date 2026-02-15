@@ -12,7 +12,7 @@ import cron from 'node-cron';
 
 (async () => {
 
-    const cronExpresion = '44 08 * * *';
+    const cronExpresion = '30 15 * * *';
 
     cron.schedule(cronExpresion, async () => {
 
