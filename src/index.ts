@@ -9,16 +9,23 @@ import { IBookingResult } from './interfaces/IBookingResult';
 import { TelegramAdapter } from './adapters/telegramAdapter';
 import { Notifier } from './interfaces/notifier';
 import cron from 'node-cron';
+import { CouchDbAdapter } from './adapters/couchDbAdapter';
+import { DatabaseAdapter } from './interfaces/databaseAdapter';
+import { DatabaseConfig } from './interfaces/databaseConfig';
+import { Repository } from './interfaces/repository';
+import { AutobookingConfiguration, AutobookingConfigurationDto } from './interfaces/autobookingConfiguration';
+import { ConfigurationRepository } from './repositories/configurationRepository';
+import { Trainings } from './enums/trainings';
 
 (async () => {
 
-    const cronExpresion = '30 15 * * *';
+    // const cronExpresion = '30 15 * * *';
 
-    cron.schedule(cronExpresion, async () => {
+    // cron.schedule(cronExpresion, async () => {
 
-        await main();
+    await main();
 
-    });
+    // });
 
 })();
 
@@ -35,10 +42,27 @@ async function main() {
     const simulationMode = config.SIMULATION_MODE;
     const sendTelegramNotification = config.SEND_TELEGRAM_NOTIFICATION;
     const browser: BrowserAdapter = new PlaywrightAdapter();
+    const databaseConfig: DatabaseConfig = {
+        user: config.DB_USER,
+        password: config.DB_PASSWORD,
+        host: config.DB_HOST,
+        port: config.DB_PORT,
+        dbName: config.DB_NAME
+    };
+    const database: DatabaseAdapter = new CouchDbAdapter(databaseConfig);
+    const bookingConfigRepository: Repository<AutobookingConfigurationDto> = new ConfigurationRepository(database);
+    const bookingConfig: AutobookingConfigurationDto | undefined = await bookingConfigRepository.get();
+
+    const autobookingConfiguration: AutobookingConfiguration = {
+        trainingName: bookingConfig?.configuration.trainingName ?? Trainings.UNDEFINED,
+        classTimeRange: bookingConfig?.configuration.classTimeRangeInit + ' - ' + bookingConfig?.configuration.classTimeRangeEnd,
+        maxDaysInAdvance: bookingConfig?.configuration.maxDaysInAdvance ?? 0,
+        isActive: bookingConfig?.configuration.isActive ?? false
+    };
 
     try {
 
-        const platform: Platform = new AimHarderAdapter(browser, simulationMode);
+        const platform: Platform = new AimHarderAdapter(browser, autobookingConfiguration, simulationMode);
 
         await platform.login(email, password);
         const result: IBookingResult = await platform.doBooking();

@@ -22,6 +22,11 @@ function requireEnv(key: string): string {
 export const config: Config = {
 
     NODE_ENV: requireEnv('NODE_ENV') as Config["NODE_ENV"],
+    DB_HOST: requireEnv('DB_HOST'),
+    DB_PORT: parseInt(requireEnv('DB_PORT')),
+    DB_USER: requireEnv('DB_USER'),
+    DB_PASSWORD: requireEnv('DB_PASSWORD'),
+    DB_NAME: requireEnv('DB_NAME'),
     EMAIL: requireEnv('EMAIL'),
     PASSWORD: requireEnv('PASSWORD'),
     TELEGRAM_TOKEN: requireEnv('TELEGRAM_TOKEN'),
