@@ -8,4 +8,6 @@ export interface DatabaseAdapter {
 
     get<T = any>(filter: any): Promise<T[]>;
 
+    onChange(callback: () => void): void;
+
 }

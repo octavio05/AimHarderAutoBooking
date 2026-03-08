@@ -8,21 +8,39 @@ import { AimHarderAdapter } from './adapters/aimHarderAdapter';
 import { IBookingResult } from './interfaces/IBookingResult';
 import { TelegramAdapter } from './adapters/telegramAdapter';
 import { Notifier } from './interfaces/notifier';
-import cron from 'node-cron';
+import cron, { ScheduledTask } from 'node-cron';
 import { AutobookingConfigurationFactory } from './factories/autobookingConfigurationFactory';
 import { AutobookingConfiguration } from './interfaces/autobookingConfiguration';
 
 (async () => {
 
+    let currentCronJob: ScheduledTask | null = null;
+    const log = new Logger(path.resolve(process.cwd(), 'logs'));
+
+    const scheduleJob = (config: AutobookingConfiguration) => {
+
+        if (currentCronJob) {
+            currentCronJob.stop();
+            log.info('Stopped previous cron job');
+        }
+
+        const [hour, minutes] = config.classtimeRangeInit.split(':');
+        const cronExpression = `${minutes} ${hour} * * *`;
+
+        currentCronJob = cron.schedule(cronExpression, async () => {
+            if (config.isActive)
+                await main(config);
+        });
+
+        log.info(`Scheduled new cron job for ${cronExpression} (Active: ${config.isActive})`);
+
+    };
+
     const autobookingConfiguration = await AutobookingConfigurationFactory.create();
+    scheduleJob(autobookingConfiguration);
 
-    const cronExpresion = '30 15 * * *';
-
-    cron.schedule(cronExpresion, async () => {
-
-        if (autobookingConfiguration.isActive)
-            await main(autobookingConfiguration);
-
+    AutobookingConfigurationFactory.onChange((newConfig) => {
+        scheduleJob(newConfig);
     });
 
 })();

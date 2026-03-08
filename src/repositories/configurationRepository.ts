@@ -49,4 +49,10 @@ export class ConfigurationRepository implements Repository<AutobookingConfigurat
 
     }
 
+    public onChange(callback: () => void): void {
+
+        this._database.onChange(callback);
+
+    }
+
 }

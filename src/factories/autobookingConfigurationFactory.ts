@@ -9,8 +9,18 @@ import { ConfigurationRepository } from '../repositories/configurationRepository
 
 export class AutobookingConfigurationFactory {
 
-    public static async create(): Promise<AutobookingConfiguration> {
+    private static mapToConfiguration(dto: AutobookingConfigurationDto | undefined): AutobookingConfiguration {
+        return {
+            trainingName: dto?.configuration.trainingName ?? Trainings.UNDEFINED,
+            classTimeRange: dto?.configuration.classTimeRangeInit + ' - ' + dto?.configuration.classTimeRangeEnd,
+            classtimeRangeInit: dto?.configuration.classTimeRangeInit ?? '',
+            classtimeRangeEnd: dto?.configuration.classTimeRangeEnd ?? '',
+            maxDaysInAdvance: dto?.configuration.maxDaysInAdvance ?? 0,
+            isActive: dto?.configuration.isActive ?? false
+        };
+    }
 
+    private static getRepository(): Repository<AutobookingConfigurationDto> {
         const databaseConfig: DatabaseConfig = {
             user: config.DB_USER,
             password: config.DB_PASSWORD,
@@ -19,17 +29,27 @@ export class AutobookingConfigurationFactory {
             dbName: config.DB_NAME
         };
         const database: DatabaseAdapter = new CouchDbAdapter(databaseConfig);
-        const bookingConfigRepository: Repository<AutobookingConfigurationDto> = new ConfigurationRepository(database);
+        return new ConfigurationRepository(database);
+    }
+
+    public static async create(): Promise<AutobookingConfiguration> {
+
+        const bookingConfigRepository = this.getRepository();
         const bookingConfig: AutobookingConfigurationDto | undefined = await bookingConfigRepository.get();
 
-        return {
-            trainingName: bookingConfig?.configuration.trainingName ?? Trainings.UNDEFINED,
-            classTimeRange: bookingConfig?.configuration.classTimeRangeInit + ' - ' + bookingConfig?.configuration.classTimeRangeEnd,
-            classtimeRangeInit: bookingConfig?.configuration.classTimeRangeInit ?? '',
-            classtimeRangeEnd: bookingConfig?.configuration.classTimeRangeEnd ?? '',
-            maxDaysInAdvance: bookingConfig?.configuration.maxDaysInAdvance ?? 0,
-            isActive: bookingConfig?.configuration.isActive ?? false
-        };
+        return this.mapToConfiguration(bookingConfig);
+
+    }
+
+    public static onChange(callback: (config: AutobookingConfiguration) => void): void {
+
+        const bookingConfigRepository = this.getRepository();
+
+        bookingConfigRepository.onChange(async () => {
+            const bookingConfig: AutobookingConfigurationDto | undefined = await bookingConfigRepository.get();
+            const configuration = this.mapToConfiguration(bookingConfig);
+            callback(configuration);
+        });
 
     }
 

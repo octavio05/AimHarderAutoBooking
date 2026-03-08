@@ -4,4 +4,6 @@ export interface Repository<T> {
 
     addOrUpdate(data: T): Promise<T>;
 
+    onChange(callback: () => void): void;
+
 }

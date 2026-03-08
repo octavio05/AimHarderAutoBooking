@@ -107,6 +107,20 @@ export class CouchDbAdapter implements DatabaseAdapter {
     }
 
     /**
+     * Subscribes to changes in the database.
+     * @param callback Function to execute when a change occurs.
+     */
+    public onChange(callback: () => void): void {
+
+        const connection = nano(this.getConnectionString());
+        const database = connection.db.use(this._config.dbName);
+        database.changesReader.start({ wait: true }).on('change', () => {
+            callback();
+        });
+
+    }
+
+    /**
      * Creates the connection string for the connection
      * @returns Connection string
      */
