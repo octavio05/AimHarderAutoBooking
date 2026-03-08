@@ -15,7 +15,9 @@ export interface AutobookingConfigurationDto {
 export interface AutobookingConfiguration {
 
     maxDaysInAdvance: number;
-    classTimeRange: string
+    classTimeRange: string;
+    classtimeRangeInit: string;
+    classtimeRangeEnd: string;
     trainingName: Trainings;
     isActive: boolean;
 
