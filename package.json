@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start:local": "npx cross-env NODE_ENV=development ts-node src/index.ts",
+    "start:db:local": "docker compose --env-file .env.local up -d couchdb-autobookings",
+    "start:local": "npx cross-env NODE_ENV=local ts-node src/index.ts",
     "build:docker:development": "docker compose --env-file .env.development build",
     "build:docker:production": "docker compose --env-file .env.production build",
     "start:development": "docker compose --env-file .env.development up -d -V",

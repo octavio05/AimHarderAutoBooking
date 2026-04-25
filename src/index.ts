@@ -25,6 +25,13 @@ import { AutobookingConfiguration } from './interfaces/autobookingConfiguration'
         }
 
         const [hour, minutes] = config.classtimeRangeInit.split(':');
+        if (!hour || !minutes) {
+
+            log.info('classTimeRangeInit not defined.');
+            return;
+
+        }
+
         const cronExpression = `${minutes} ${hour} * * *`;
 
         currentCronJob = cron.schedule(cronExpression, async () => {

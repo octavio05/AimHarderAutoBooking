@@ -3,6 +3,7 @@ FROM node:20-slim
 # Configuración de idioma a Español y dependencias base para Chromium Headless/xvfb
 RUN apt-get update && apt-get install -y --no-install-recommends \
     locales \
+    tzdata \
     xvfb \
     xauth \
     && sed -i -e 's/# es_ES.UTF-8 UTF-8/es_ES.UTF-8 UTF-8/' /etc/locale.gen \

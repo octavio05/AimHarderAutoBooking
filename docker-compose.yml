@@ -1,5 +1,6 @@
+name: autobooking
 services:
-  bot:
+  bot-autobooking:
     container_name: aimharder-auto-booking
     build:
       context: .
@@ -19,23 +20,36 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=${DB_HOST}
       - DB_NAME=${DB_NAME}
+      - TZ=${TZ}
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped
     depends_on:
-      - couchdb-bookings
+      - couchdb-autobookings
+    networks:
+      - network-autobookings
 
-  couchdb-bookings:
+  couchdb-autobookings:
     image: couchdb:3
-    container_name: couchdb-bookings
+    container_name: couchdb-autobookings
     restart: always
     ports:
       - "${DB_PORT}:5984"
     environment:
-      COUCHDB_USER: ${DB_USER}
-      COUCHDB_PASSWORD: ${DB_PASSWORD}
+      - COUCHDB_USER=${DB_USER}
+      - COUCHDB_PASSWORD=${DB_PASSWORD}
+      - COUCHDB_NODENAME=127.0.0.1
+      - COUCHDB_SECRET=monster
+      - TZ=${TZ}
     volumes:
-      - couchdb_bookings_data:/opt/couchdb/data
+      - couchdb_auto_bookings_data:/opt/couchdb/data
+    networks:
+      - network-autobookings
 
 volumes:
-  couchdb_bookings_data:
+  couchdb_auto_bookings_data:
+    name: couchdb_autobookings_data
+
+networks:
+  network-autobookings:
+    name: network-autobookings

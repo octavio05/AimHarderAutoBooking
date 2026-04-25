@@ -139,19 +139,19 @@ export class AimHarderAdapter implements Platform {
 
     private async writeUserName(userName: string) {
 
-        await this.write('#mail', userName);
+        await this.write('input[name="username"]', userName);
 
     }
 
     private async writePassword(password: string) {
 
-        await this.write('#pw', password);
+        await this.write('input[name="password"]', password);
 
     }
 
     private async clickLogin() {
 
-        await this.click('#loginSubmit');
+        await this.click('button[type="submit"]');
 
     }
 

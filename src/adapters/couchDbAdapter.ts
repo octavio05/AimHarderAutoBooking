@@ -31,6 +31,17 @@ export class CouchDbAdapter implements DatabaseAdapter {
         this._connection = nano(this.getConnectionString());
 
         const dbList: string[] = await this._connection.db.list();
+        const systemDbs = ["_users", "_replicator", "_global_changes"];
+
+        for (const db of systemDbs) {
+            if (!dbList.includes(db)) {
+                try {
+                    await this._connection.db.create(db);
+                } catch (e) {
+                    // Ignore if already created by another process
+                }
+            }
+        }
 
         if (!dbList.includes(this._config.dbName))
             await this._connection.db.create(this._config.dbName);
