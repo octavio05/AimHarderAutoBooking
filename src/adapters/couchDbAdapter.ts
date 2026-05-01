@@ -9,6 +9,7 @@ export class CouchDbAdapter implements DatabaseAdapter {
 
     private readonly _config: DatabaseConfig;
     private _connection: nano.ServerScope | null = null;
+    private _changesReader: any = null;
 
     /**
      * Constructor
@@ -123,9 +124,14 @@ export class CouchDbAdapter implements DatabaseAdapter {
      */
     public onChange(callback: () => void): void {
 
+        if (this._changesReader)
+            this._changesReader.stop();
+
         const connection = nano(this.getConnectionString());
         const database = connection.db.use(this._config.dbName);
-        database.changesReader.start({ wait: true }).on('change', () => {
+
+        this._changesReader = database.changesReader;
+        this._changesReader.start({ wait: true }).on('change', () => {
             callback();
         });
 

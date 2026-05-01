@@ -1,6 +1,5 @@
 import { CouchDbAdapter } from '../adapters/couchDbAdapter';
 import { config } from '../config';
-import { Trainings } from '../enums/trainings';
 import { AutobookingConfiguration, AutobookingConfigurationDto } from '../interfaces/autobookingConfiguration';
 import { DatabaseAdapter } from '../interfaces/databaseAdapter';
 import { DatabaseConfig } from '../interfaces/databaseConfig';
@@ -9,18 +8,23 @@ import { ConfigurationRepository } from '../repositories/configurationRepository
 
 export class AutobookingConfigurationFactory {
 
+    private static _repository: Repository<AutobookingConfigurationDto> | undefined;
+
     private static mapToConfiguration(dto: AutobookingConfigurationDto | undefined): AutobookingConfiguration {
+
         return {
-            trainingName: dto?.configuration.trainingName ?? Trainings.UNDEFINED,
-            classTimeRange: dto?.configuration.classTimeRangeInit + ' - ' + dto?.configuration.classTimeRangeEnd,
-            classtimeRangeInit: dto?.configuration.classTimeRangeInit ?? '',
-            classtimeRangeEnd: dto?.configuration.classTimeRangeEnd ?? '',
-            maxDaysInAdvance: dto?.configuration.maxDaysInAdvance ?? 0,
-            isActive: dto?.configuration.isActive ?? false
+            maxDaysInAdvance: dto?.configuration?.maxDaysInAdvance ?? 0,
+            isActive: dto?.configuration?.isActive ?? false,
+            trainings: dto?.configuration?.trainings ?? {}
         };
+
     }
 
     private static getRepository(): Repository<AutobookingConfigurationDto> {
+
+        if (this._repository)
+            return this._repository;
+
         const databaseConfig: DatabaseConfig = {
             user: config.DB_USER,
             password: config.DB_PASSWORD,
@@ -28,8 +32,13 @@ export class AutobookingConfigurationFactory {
             port: config.DB_PORT,
             dbName: config.DB_NAME
         };
+
         const database: DatabaseAdapter = new CouchDbAdapter(databaseConfig);
-        return new ConfigurationRepository(database);
+
+        this._repository = new ConfigurationRepository(database);
+
+        return this._repository;
+
     }
 
     public static async create(): Promise<AutobookingConfiguration> {

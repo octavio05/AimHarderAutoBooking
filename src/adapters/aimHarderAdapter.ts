@@ -4,30 +4,37 @@ import { BrowserAdapter } from "../interfaces/browserAdapter";
 import { IBookingResult } from "../interfaces/IBookingResult";
 import { BookingResult } from "../models/bookingResult";
 import { Training } from "../models/training";
-import { AutobookingConfiguration } from "../interfaces/autobookingConfiguration";
+import { DailyTraining } from "../interfaces/autobookingConfiguration";
 
 export class AimHarderAdapter implements Platform {
 
     private _browser: BrowserAdapter;
     private _simulation: boolean;
-    private _bookingConfig: AutobookingConfiguration;
     private loginUrl = 'https://login.aimharder.com/';
+    private _trainingOfTheDay: DailyTraining;
+    private _bookingDate: Date;
+    private _maxDaysInAdvance: number;
 
-    public constructor(browser: BrowserAdapter, bookingConfig: AutobookingConfiguration, simulation: boolean) {
+    public constructor(browser: BrowserAdapter, trainingOfTheDay: DailyTraining, maxDaysInAdvance: number, simulation: boolean) {
 
         if (browser === null || browser === undefined)
             throw new Error('browser cannot be null or undefined');
 
-        if (bookingConfig === null || bookingConfig === undefined)
-            throw new Error('bookingConfig cannot be null or undefined');
+        if (trainingOfTheDay === null || trainingOfTheDay === undefined)
+            throw new Error('trainingOfTheDay cannot be null or undefined');
 
         this._browser = browser;
         this._simulation = simulation ?? true;
-        this._bookingConfig = bookingConfig;
+        this._bookingDate = this.getBookingDate(maxDaysInAdvance);
+        this._trainingOfTheDay = trainingOfTheDay;
+        this._maxDaysInAdvance = maxDaysInAdvance;
 
     }
 
     public async login(email: string, password: string): Promise<void> {
+
+        if (!this._trainingOfTheDay)
+            return;
 
         if (email === null || email === undefined || email.trim() === '')
             throw new Error('email cannot be null or empty');
@@ -61,46 +68,38 @@ export class AimHarderAdapter implements Platform {
 
         if (training.length === 0) {
 
-            result.message = `❌ No classes were found on ${this.getBookingDate().toLocaleDateString()} at ${this._bookingConfig.classTimeRange}`;
+            result.message = `❌ No classes were found on ${this._bookingDate.toLocaleDateString()} at ${this._trainingOfTheDay!.classTimeRangeInit}`;
             return result;
 
         }
 
-        if (training.find(t => t.onWaitingList && t.name.toUpperCase() === this._bookingConfig.trainingName)) {
+        if (training.find(t => t.onWaitingList && t.name.toUpperCase() === this._trainingOfTheDay!.trainingName)) {
 
-            result.message = `🕐 [${this._bookingConfig.trainingName}] Class is on waiting list on ${this.getBookingDate().toLocaleDateString()} at ${this._bookingConfig.classTimeRange}`;
+            result.message = `🕐 [${this._trainingOfTheDay!.trainingName}] Class is on waiting list on ${this._bookingDate.toLocaleDateString()} at ${this._trainingOfTheDay!.classTimeRangeInit}`;
             return result;
 
         }
 
-        if (training.find(t => t.isBooked && t.name.toUpperCase() === this._bookingConfig.trainingName)) {
+        if (training.find(t => t.isBooked && t.name.toUpperCase() === this._trainingOfTheDay!.trainingName)) {
 
-            result.message = `✅ [${this._bookingConfig.trainingName}] Class is already booked on ${this.getBookingDate().toLocaleDateString()} at ${this._bookingConfig.classTimeRange}`;
+            result.message = `✅ [${this._trainingOfTheDay!.trainingName}] Class is already booked on ${this._bookingDate.toLocaleDateString()} at ${this._trainingOfTheDay!.classTimeRangeInit}`;
             return result;
 
         }
 
-        if (training.find(t => !t.isAvailable && t.name.toUpperCase() === this._bookingConfig.trainingName)) {
+        if (training.find(t => !t.isAvailable && t.name.toUpperCase() === this._trainingOfTheDay!.trainingName)) {
 
-            result.message = `❌ [${this._bookingConfig.trainingName}] Class is not available on ${this.getBookingDate().toLocaleDateString()} at ${this._bookingConfig.classTimeRange}`;
+            result.message = `❌ [${this._trainingOfTheDay!.trainingName}] Class is not available on ${this._bookingDate.toLocaleDateString()} at ${this._trainingOfTheDay!.classTimeRangeInit}`;
             return result;
 
         }
 
         if (!this._simulation)
-            await training.find(t => t.name.toUpperCase() === this._bookingConfig.trainingName)?.button?.click();
+            await training.find(t => t.name.toUpperCase() === this._trainingOfTheDay!.trainingName)?.button?.click();
 
         result.success = true;
-        result.message = `✅ [${this._bookingConfig.trainingName}] Class booked on ${this.getBookingDate().toLocaleDateString()} at ${this._bookingConfig.classTimeRange}`;
+        result.message = `✅ [${this._trainingOfTheDay!.trainingName}] Class booked on ${this._bookingDate.toLocaleDateString()} at ${this._trainingOfTheDay!.classTimeRangeInit}`;
         return result;
-
-    }
-
-    private getBookingDate(): Date {
-
-        const date = new Date();
-        date.setDate(date.getDate() + this._bookingConfig.maxDaysInAdvance);
-        return date;
 
     }
 
@@ -163,7 +162,7 @@ export class AimHarderAdapter implements Platform {
 
     private async goToBookingDay() {
 
-        for (let i = 0; i < this._bookingConfig.maxDaysInAdvance; i++) {
+        for (let i = 0; i < this._maxDaysInAdvance; i++) {
 
             await this._browser.waitForSelector('#nextDay');
             await this.click('#nextDay');
@@ -185,10 +184,10 @@ export class AimHarderAdapter implements Platform {
 
             const time = await cod.getElement('.rvHora').textContent();
 
-            if (time === this._bookingConfig.classTimeRange)
+            if (time === this._trainingOfTheDay!.classTimeRangeInit)
                 return new Training({
                     name: await cod.getElement('.rvNombreCl').textContent() || '',
-                    date: this.getBookingDate(),
+                    date: this._bookingDate,
                     time: time,
                     isBooked: await this.isTrainingBooked(cod),
                     isAvailable: await this.isTrainingAvailable(cod),
@@ -248,6 +247,14 @@ export class AimHarderAdapter implements Platform {
 
         const bookingButton = await this.getBookingButton(trainingElement);
         return !!bookingButton;
+
+    }
+
+    private getBookingDate(maxDaysInAdvance: number): Date {
+
+        const date = new Date();
+        date.setDate(date.getDate() + maxDaysInAdvance);
+        return date;
 
     }
 
