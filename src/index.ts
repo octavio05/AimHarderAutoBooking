@@ -8,10 +8,11 @@ import { AimHarderAdapter } from './adapters/aimHarderAdapter';
 import { IBookingResult } from './interfaces/IBookingResult';
 import { TelegramAdapter } from './adapters/telegramAdapter';
 import { Notifier } from './interfaces/notifier';
-import cron, { ScheduledTask } from 'node-cron';
+import cron from 'node-cron';
 import { AutobookingConfigurationFactory } from './factories/autobookingConfigurationFactory';
-import { Weekday } from './enums/weekdays';
 import { AutobookingConfiguration, DailyTraining } from './interfaces/autobookingConfiguration';
+import { BookingJobManager } from './managers/bookingJobManager';
+import { IBookingJobManager } from './interfaces/IBookingJobManager';
 
 (async () => {
 
@@ -19,68 +20,15 @@ import { AutobookingConfiguration, DailyTraining } from './interfaces/autobookin
 
     log.info('Start process');
 
-    let currentCronJob: ScheduledTask | null = null;
+    const bookingJobManager: IBookingJobManager = getBookingJobManager(log);
 
-    const scheduleNextJob = (config: AutobookingConfiguration) => {
-
-        if (currentCronJob) {
-            currentCronJob.stop();
-            log.info('Stopped previous cron job');
-        }
-
-        try {
-
-            AutobookingConfigurationFactory.onChange((newConfig) => {
-                scheduleNextJob(newConfig);
-            });
-
-        }
-        catch (error) {
-
-            log.error((error as Error).stack!);
-
-        }
-
-        if (!config.isActive || !config.trainings || Object.keys(config.trainings).length === 0) {
-            log.info('Autobooking is inactive or no trainings configured.');
-            return;
-        }
-
-        const currentDate = new Date();
-        const bookingDate = new Date();
-        bookingDate.setDate(currentDate.getDate() + (config.maxDaysInAdvance ?? 0));
-        const training = getTrainingForDate(config, bookingDate);
-
-        if (!training) {
-            log.info(`No training configured for ${bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()} ${bookingDate}`);
-            return;
-        }
-
-        const [hour, minute] = training.classTimeRangeInit.split(':').map(Number);
-        const cronExpression = `${minute} ${hour} ${currentDate.getDate()} ${currentDate.getMonth() + 1} ${currentDate.getDay()}`;
-
-        currentCronJob = cron.schedule(cronExpression, async () => {
-            await main(training, config.maxDaysInAdvance ?? 0, log);
-            scheduleNextJob(config);
-        });
-
-        const formatter = new Intl.DateTimeFormat('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-        });
-
-        log.info(`Scheduled next job for ${currentDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()} ${formatter.format(currentDate)} at ${training.classTimeRangeInit} to book the class for ${bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()} ${formatter.format(bookingDate)} (${training.trainingName})`);
-
-    };
-
-    scheduleNextJob(await getAutobookingConfiguration(log));
+    bookingJobManager.start(await getAutobookingConfiguration(log));
 
     const dailyJobExpression = '0 0 * * *';
     // const dailyJobExpression = '0 */2 * * * *';
     cron.schedule(dailyJobExpression, async () => {
 
-        scheduleNextJob(await getAutobookingConfiguration(log));
+        bookingJobManager.start(await getAutobookingConfiguration(log));
 
     });
 
@@ -88,7 +36,7 @@ import { AutobookingConfiguration, DailyTraining } from './interfaces/autobookin
 
 async function main(trainingOfTheDay: DailyTraining, maxDaysInAdvance: number, log: Logger) {
 
-    log.info('start job execution...');
+    log.info('start booking process execution...');
 
     const email = config.EMAIL;
     const password = config.PASSWORD;
@@ -123,7 +71,7 @@ async function main(trainingOfTheDay: DailyTraining, maxDaysInAdvance: number, l
     finally {
 
         await browser.close();
-        log.info('end job execution');
+        log.info('end booking process execution');
 
     }
 
@@ -145,19 +93,17 @@ async function getAutobookingConfiguration(log: Logger): Promise<AutobookingConf
 
 }
 
-function getTrainingForDate(config: AutobookingConfiguration, bookingDate: Date): DailyTraining | undefined {
+function getBookingJobManager(log: Logger): IBookingJobManager {
 
-    const dayOfWeek = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() as Weekday;
-    const training = config.trainings?.[dayOfWeek];
+    const bookingJobManager: IBookingJobManager = new BookingJobManager(log, async (training, maxDaysInAdvance, log) => {
 
-    if (!training) return undefined;
+        await main(training, maxDaysInAdvance, log);
+        bookingJobManager.stop();
+        bookingJobManager.start(await getAutobookingConfiguration(log));
 
-    const [hours, minutes] = training.classTimeRangeInit.split(':').map(Number);
-    const referenceDate = new Date();
-    referenceDate.setHours(hours, minutes, 0, 0);
+    });
 
-    if (referenceDate <= new Date()) return undefined;
-
-    return training;
+    return bookingJobManager;
 
 }
+
