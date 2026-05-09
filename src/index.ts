@@ -19,18 +19,25 @@ import { IBookingJobManager } from './interfaces/IBookingJobManager';
     const log = new Logger(path.resolve(process.cwd(), 'logs'));
 
     log.info('Start process');
+    const executeJob = config.EXECUTE_JOB;
+    log.info(`EXECUTE JOB: ${executeJob}`);
 
     const bookingJobManager: IBookingJobManager = getBookingJobManager(log);
 
-    bookingJobManager.start(await getAutobookingConfiguration(log));
-
-    const dailyJobExpression = '0 0 * * *';
-    // const dailyJobExpression = '0 */2 * * * *';
-    cron.schedule(dailyJobExpression, async () => {
+    if (executeJob) {
 
         bookingJobManager.start(await getAutobookingConfiguration(log));
 
-    });
+        const dailyJobExpression = '0 0 * * *';
+        cron.schedule(dailyJobExpression, async () => {
+
+            bookingJobManager.start(await getAutobookingConfiguration(log));
+
+        });
+
+    }
+    else
+        await bookingJobManager.startNow(await getAutobookingConfiguration(log));
 
 })();
 

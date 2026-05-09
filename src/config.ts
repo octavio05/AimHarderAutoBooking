@@ -33,5 +33,6 @@ export const config: Config = {
     TELEGRAM_CHAT_ID: requireEnv('TELEGRAM_CHAT_ID'),
     SIMULATION_MODE: requireEnv('SIMULATION_MODE') === 'true',
     SEND_TELEGRAM_NOTIFICATION: requireEnv('SEND_TELEGRAM_NOTIFICATION') === 'true',
+    EXECUTE_JOB: requireEnv('EXECUTE_JOB') === 'true',
 
 }

@@ -11,4 +11,5 @@ export interface Config {
     TELEGRAM_CHAT_ID: string;
     SIMULATION_MODE: boolean;
     SEND_TELEGRAM_NOTIFICATION: boolean;
+    EXECUTE_JOB: boolean;
 }

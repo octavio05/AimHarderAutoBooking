@@ -175,7 +175,7 @@ export class AimHarderAdapter implements Platform {
     private async getTrainingOfTheDayInTime(): Promise<Training[]> {
 
         await this._browser.waitForSelector('#clasesDiaSel');
-        const allTrainingOfTheDay: BrowserElement[] | null = await this._browser.getElements('#clasesDiaSel div');
+        const allTrainingOfTheDay: BrowserElement[] | null = await this._browser.getElements('#clasesDiaSel .bloqueClase');
 
         if (!allTrainingOfTheDay)
             return [];
@@ -183,8 +183,14 @@ export class AimHarderAdapter implements Platform {
         const trainings = await Promise.all(allTrainingOfTheDay.map(async (cod) => {
 
             const time = await cod.getElement('.rvHora').textContent();
+            const name = await cod.getElement('.rvNombreCl').textContent();
+            const classTimeRange = `${this._trainingOfTheDay!.classTimeRangeInit} - ${this._trainingOfTheDay!.classTimeRangeEnd}`;
+            const trainingName = this._trainingOfTheDay!.trainingName;
 
-            if (time === this._trainingOfTheDay!.classTimeRangeInit)
+            const timeMatches = time !== null && classTimeRange.includes(time);
+            const nameMatches = name !== null && name.toUpperCase() === trainingName.toUpperCase();
+
+            if (timeMatches && nameMatches)
                 return new Training({
                     name: await cod.getElement('.rvNombreCl').textContent() || '',
                     date: this._bookingDate,

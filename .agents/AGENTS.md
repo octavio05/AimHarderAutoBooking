@@ -4,6 +4,17 @@
 - Each function must start and end with a blank line.
 - If an if/else statement has only one line, braces must not be used.
 
+## Setup and run
+
+- Package manager: pnpm
+- Install dependencies: `pnpm install`
+- Run project in local mode: `pnpm run start:local`
+- Build docker project development: `pnpm run build:development`
+- Build docker project production: `pnpm run build:production`
+- Run docker project development: `pnpm run start:development`
+- Run docker project production: `pnpm run start:production`
+- Run docker database container to local execution: `pnpm run start:db:local`
+
 ## Git
 
 - The commit message will be shown twice, in Spanish and in English.

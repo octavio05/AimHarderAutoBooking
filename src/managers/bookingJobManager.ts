@@ -11,6 +11,7 @@ export class BookingJobManager implements IBookingJobManager {
     private _bookingProcess: (training: DailyTraining, maxDaysInAdvance: number, log: Logger) => Promise<void>;
     private _currentBookingJob: ScheduledTask | null = null;
     private _isInitialized: boolean = false;
+    private _isFirstExecution: boolean = true;
 
     public constructor(log: Logger, bookingProcess: (training: DailyTraining, maxDaysInAdvance: number, log: Logger) => Promise<void>) {
 
@@ -38,6 +39,35 @@ export class BookingJobManager implements IBookingJobManager {
 
     }
 
+    public async startNow(config: AutobookingConfiguration): Promise<void> {
+
+        if (!config.isActive || !config.trainings || Object.keys(config.trainings).length === 0) {
+
+            this._log.info('Autobooking is inactive or no trainings configured.');
+            return;
+
+        }
+
+        const maxDays: number = config.maxDaysInAdvance ?? 0;
+        const bookingDate: Date = new Date();
+        bookingDate.setDate(bookingDate.getDate() + maxDays);
+
+        const training: DailyTraining | undefined = this.getTrainingForDate(config, bookingDate, false);
+
+        if (!training) {
+
+            this._log.info(`No training configured on ${this.formatDate(bookingDate)}`);
+            return;
+
+        }
+
+        this._log.info(`Starting booking process immediately for ${this.getWeekDay(bookingDate)}, ${this.formatDate(bookingDate)}` +
+            ` at ${training.classTimeRangeInit} - ${training.classTimeRangeEnd} (${training.trainingName})`);
+
+        await this._bookingProcess(training, maxDays, this._log);
+
+    }
+
     private initializeEvents() {
 
         if (this._isInitialized) return;
@@ -61,7 +91,7 @@ export class BookingJobManager implements IBookingJobManager {
 
     }
 
-    private scheduleBooking(config: AutobookingConfiguration) {
+    private async scheduleBooking(config: AutobookingConfiguration) {
 
         this.stopCurrentBookingJob();
 
@@ -75,6 +105,14 @@ export class BookingJobManager implements IBookingJobManager {
         const maxDays: number = config.maxDaysInAdvance ?? 0;
         const bookingDate: Date = new Date();
         bookingDate.setDate(bookingDate.getDate() + maxDays);
+
+        if (this._isFirstExecution) {
+
+            this._isFirstExecution = false;
+            await this.startNow(config);
+            return;
+
+        }
 
         const training: DailyTraining | undefined = this.getTrainingForDate(config, bookingDate);
 
@@ -128,7 +166,7 @@ export class BookingJobManager implements IBookingJobManager {
 
     }
 
-    private getTrainingForDate(config: AutobookingConfiguration, bookingDate: Date): DailyTraining | undefined {
+    private getTrainingForDate(config: AutobookingConfiguration, bookingDate: Date, filterByReferenceDate: boolean = true): DailyTraining | undefined {
 
         const dayOfWeek: Weekday = this.getWeekDay(bookingDate) as Weekday;
         const training: DailyTraining | undefined = config.trainings?.[dayOfWeek];
@@ -139,7 +177,7 @@ export class BookingJobManager implements IBookingJobManager {
         const referenceDate: Date = new Date();
         referenceDate.setHours(hours, minutes, 0, 0);
 
-        if (referenceDate <= new Date()) return undefined;
+        if (filterByReferenceDate && referenceDate <= new Date()) return undefined;
 
         return training;
 
