@@ -44,6 +44,7 @@ services:
       - TZ=${TZ}
     volumes:
       - couchdb_auto_bookings_data:/opt/couchdb/data
+      - ./couchdb.ini:/opt/couchdb/etc/local.d/single-node.ini
     networks:
       - network-autobookings
 

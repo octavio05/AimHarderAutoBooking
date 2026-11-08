@@ -156,7 +156,8 @@ export class AimHarderAdapter implements Platform {
 
     private async goToBookings() {
 
-        await this.click('.ahPicReservations');
+        // await this.click('.ahPicReservations');
+        await this.click('div[data-rail-item-id="CALENDAR"] a');
 
     }
 
